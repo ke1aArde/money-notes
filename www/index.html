@@ -430,16 +430,14 @@ function billHTML(){
 function bindBill(){}
 
 // ==================== NAV ====================
-document.querySelectorAll('#nav button').forEach(b=>{b.onclick=()=>{S.page=b.dataset.p;render()}});
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.querySelectorAll('#nav button').forEach(b=>{b.onclick=()=>{S.page=b.dataset.p;render()}});
+  if(!localStorage._warned){localStorage._warned='1';setTimeout(()=>toast('数据存在手机本地'),800)}
+  render();
+});
 
-// Data safety note
-if(!localStorage._warned){localStorage._warned='1';
-  setTimeout(()=>toast('数据存在手机本地，不清缓存不丢失'),800);}
-
-// SW
-if('serviceWorker' in navigator){navigator.serviceWorker.register('data:application/javascript,'+encodeURIComponent(`self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>new Response('')))})`))}
-
-render();
+// SW - disabled for Android WebView compatibility
+// if('serviceWorker' in navigator){...}
 </script>
 </body>
 </html>
