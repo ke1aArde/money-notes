@@ -36,6 +36,16 @@ jobs:
       - name: Sync web files
         run: npx cap sync android
 
+      - name: Verify www in assets
+        run: |
+          echo "=== android/app/src/main/assets/ ==="
+          find android/app/src/main/assets/ -type f 2>/dev/null || echo "NO ASSETS FOUND"
+          # Ensure www files are copied manually if cap sync missed them
+          mkdir -p android/app/src/main/assets/public
+          cp -r www/* android/app/src/main/assets/public/ 2>/dev/null || true
+          echo "=== After manual copy ==="
+          find android/app/src/main/assets/public/ -type f 2>/dev/null || echo "STILL NO FILES"
+
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug
 
