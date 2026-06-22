@@ -430,14 +430,16 @@ function billHTML(){
 function bindBill(){}
 
 // ==================== NAV ====================
+try{
 document.addEventListener('DOMContentLoaded', ()=>{
   document.querySelectorAll('#nav button').forEach(b=>{b.onclick=()=>{S.page=b.dataset.p;render()}});
   if(!localStorage._warned){localStorage._warned='1';setTimeout(()=>toast('数据存在手机本地'),800)}
   render();
 });
 
-// SW - disabled for Android WebView compatibility
+// SW disabled
 // if('serviceWorker' in navigator){...}
+}catch(e){document.body.innerHTML='<div style="color:#f5f5f5;text-align:center;padding:40px">App Error<br><small>'+e.message+'</small></div>';console.error(e)}
 </script>
 </body>
 </html>
