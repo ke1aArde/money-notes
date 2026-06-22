@@ -1,0 +1,13 @@
+{
+  "name": "MoneyNotes",
+  "short_name": "MN",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "icons": [{
+    "src": "icon.svg",
+    "sizes": "100x100",
+    "type": "image/svg+xml"
+  }]
+}

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a1a">
+<title>MoneyNotes</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#1a1a1a;--card:#242424;--border:#333;--text:#f5f5f5;
+  --dim:#999;--accent:#f5f5f5;--red:#ff453a;--green:#30d158;
+  --orange:#ff9f0a;--r:10px;
+  --safe:env(safe-area-inset-bottom,0);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--bg);color:var(--text);height:100dvh;overflow:hidden;
+  display:flex;flex-direction:column;max-width:100vw;
+}
+#toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%);
+  background:var(--card);color:var(--text);padding:8px 20px;
+  border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:opacity .25s;
+  pointer-events:none;border:1px solid var(--border);
+}
+#toast.show{opacity:1}
+#main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(56px+var(--safe))}
+
+/* Nav */
+#nav{
+  position:fixed;bottom:0;left:0;right:0;height:56px;
+  background:var(--card);display:flex;border-top:1px solid var(--border);
+  padding-bottom:var(--safe);z-index:100;
+}
+#nav button{
+  flex:1;min-width:0;background:none;border:none;color:var(--dim);
+  font-size:10px;font-family:inherit;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1px;transition:color .2s;letter-spacing:.5px;
+  padding:4px 2px;
+}
+#nav button .dot{width:4px;height:4px;border-radius:2px;background:transparent}
+#nav button.on{color:var(--accent)}#nav button.on .dot{background:var(--accent)}
+
+/* Top */
+.top-bar{
+  position:sticky;top:0;background:var(--bg);padding:16px 16px 10px;
+  z-index:10;display:flex;justify-content:space-between;align-items:center;
+}
+.top-bar h2{font-size:22px;font-weight:600;letter-spacing:-.3px;white-space:nowrap}
+
+/* User switch */
+.user-switch{
+  display:flex;background:var(--card);border-radius:16px;
+  border:1px solid var(--border);overflow:hidden;flex-shrink:0;
+}
+.user-switch button{
+  padding:4px 12px;font-size:11px;border:none;cursor:pointer;
+  font-family:inherit;background:transparent;color:var(--dim);white-space:nowrap;
+  transition:all .2s;
+}
+.user-switch button.sel{background:var(--accent);color:var(--bg);font-weight:600}
+
+/* Cards */
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:12px;margin-bottom:6px}
+.card-row{display:flex;align-items:center;gap:10px;min-width:0}
+
+/* Summary */
+.sum-row{display:flex;gap:6px;margin:0 16px 16px}
+.sum-row>div{
+  flex:1;min-width:0;background:var(--card);border-radius:var(--r);
+  padding:10px 8px;text-align:center;border:1px solid var(--border);
+}
+.sum-row .lbl{font-size:10px;color:var(--dim);margin-bottom:2px;letter-spacing:.5px}
+.sum-row .val{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Ledger records */
+.rec-icon{
+  width:32px;height:32px;border-radius:7px;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;
+}
+.rec-info{flex:1;min-width:0;overflow:hidden}
+.rec-info .t{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-info .m{font-size:10px;color:var(--dim);margin-top:1px}
+.rec-amt{font-size:15px;font-weight:600;white-space:nowrap;flex-shrink:0}
+
+/* FAB */
+.fab{
+  position:fixed;bottom:76px;right:16px;width:44px;height:44px;border-radius:22px;
+  background:var(--accent);color:var(--bg);font-size:22px;font-weight:300;
+  border:none;cursor:pointer;z-index:50;display:flex;align-items:center;
+  justify-content:center;
+}
+
+/* Modal */
+.mdl{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end}
+.mdl.show{display:flex}
+.mdl-in{background:var(--card);width:100%;max-width:100%;border-radius:14px 14px 0 0;padding:16px;max-height:85vh;overflow-y:auto;border-top:1px solid var(--border);margin:0}
+.mdl-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.mdl-bar button{background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;padding:0;font-family:inherit}
+.mdl-bar span{font-size:15px;font-weight:600}
+.inp{margin-bottom:12px}
+.inp label{font-size:10px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:.5px}
+.inp input,.inp textarea{
+  width:100%;padding:10px;font-size:14px;background:var(--bg);
+  border:1px solid var(--border);border-radius:var(--r);color:var(--text);
+  outline:none;font-family:inherit;max-width:100%;
+}
+.inp textarea{resize:none;line-height:1.6;height:180px}
+
+/* Tags */
+.tags{display:flex;gap:5px;overflow-x:auto;padding:0 16px 12px;-webkit-overflow-scrolling:touch;max-width:100vw}
+.tags::-webkit-scrollbar{display:none}
+.tg{
+  font-size:11px;padding:4px 10px;border-radius:12px;cursor:pointer;
+  white-space:nowrap;background:var(--card);color:var(--dim);
+  border:1px solid var(--border);transition:all .2s;flex-shrink:0;
+}
+.tg.sel{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+
+/* Note */
+.ni .ni-t{font-size:14px;font-weight:500;margin-bottom:2px}
+.ni .ni-p{font-size:11px;color:var(--dim);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ni .ni-tags{display:flex;gap:3px;flex-wrap:wrap}
+.ni .ni-tags span{font-size:9px;padding:2px 6px;background:var(--bg);color:var(--dim);border-radius:5px;border:1px solid var(--border)}
+
+/* Budget */
+.bg-ring{display:flex;justify-content:center;padding:16px 0}
+.bg-cards{display:flex;gap:6px;margin:0 16px 16px}
+.bg-cards>div{flex:1;min-width:0;background:var(--card);border-radius:var(--r);padding:10px 8px;text-align:center;border:1px solid var(--border)}
+.bg-cards .lbl{font-size:10px;color:var(--dim);margin-bottom:2px;letter-spacing:.5px}
+.bg-cards .val{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Todo chains */
+.chains{display:flex;flex-direction:column;gap:16px;margin:0 16px}
+.chain-card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:14px;overflow:hidden}
+.ch-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ch-h .n{font-size:14px;font-weight:600;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-h .del{font-size:10px;color:var(--red);cursor:pointer;padding:3px 7px;border-radius:5px;border:1px solid rgba(255,69,58,.3);flex-shrink:0}
+.arow{display:flex;align-items:center;overflow-x:auto;padding:4px 0 6px;gap:0;-webkit-overflow-scrolling:touch;max-width:100%}
+.arow::-webkit-scrollbar{display:none}
+.an{display:flex;align-items:center;flex-shrink:0}
+.ac{
+  width:28px;height:28px;border-radius:14px;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:700;cursor:pointer;
+  flex-shrink:0;border:2px solid var(--border);background:var(--card);
+  color:var(--dim);transition:all .2s;
+}
+.ac.done{background:var(--green);border-color:var(--green);color:#fff}
+.ac.now{border-color:var(--accent);color:var(--accent)}
+.al{width:24px;height:2px;flex-shrink:0;background:var(--border);margin:0 1px}
+.al.done{background:var(--green)}
+.alabels{display:flex;align-items:flex-start;overflow-x:auto;padding:0 0 4px;gap:0;-webkit-overflow-scrolling:touch;max-width:100%}
+.alabels::-webkit-scrollbar{display:none}
+.aln{flex-shrink:0;text-align:center}
+.aln .l{font-size:10px;color:var(--dim);width:28px;margin:0 13px;word-break:break-word;line-height:1.2}
+.aln .l.done{color:var(--green);text-decoration:line-through}
+.aln .l.now{color:var(--accent)}
+.addn{
+  flex-shrink:0;width:28px;height:28px;border-radius:14px;background:var(--card);
+  border:1px dashed var(--border);color:var(--dim);font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;margin-left:2px;
+}
+.addc{
+  width:calc(100% - 32px);margin:16px 16px;padding:10px;
+  background:var(--card);border:1px dashed var(--border);
+  border-radius:var(--r);color:var(--dim);font-size:12px;cursor:pointer;
+  font-family:inherit;letter-spacing:.5px;
+}
+.subs{margin-top:6px;padding-left:30px}
+.subs .sr{display:flex;align-items:center;gap:5px;padding:3px 0;cursor:pointer;font-size:11px}
+.subs .sd{font-size:9px;color:var(--dim)}.subs .sd.done{color:var(--green)}
+.subs .sn.done{color:var(--green);text-decoration:line-through}
+.addsub{font-size:10px;color:var(--dim);cursor:pointer;padding:2px 6px;margin-left:30px;margin-top:3px;background:var(--bg);border:1px dashed var(--border);border-radius:5px;display:inline-block}
+
+/* Bill */
+.bill-cols{display:flex;gap:6px;margin:0 16px 12px}
+.bill-cols>div{flex:1;min-width:0;background:var(--card);border-radius:var(--r);padding:10px 8px;border:1px solid var(--border);text-align:center}
+.bill-cols .b-lbl{font-size:10px;color:var(--dim);margin-bottom:2px;letter-spacing:.5px}
+.bill-cols .b-val{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-row{margin-bottom:5px}
+.bar-row .bar-lbl{font-size:10px;color:var(--dim);margin-bottom:2px;display:flex;justify-content:space-between}
+.bar-row .bar-lbl span:last-child{font-size:11px;color:var(--text);font-weight:500}
+.bar-outer{background:var(--bg);border-radius:3px;height:5px;overflow:hidden}
+.bar-inner{height:5px;border-radius:3px;transition:width .3s}
+
+/* Empty state */
+.empty{text-align:center;color:var(--dim);padding:36px 16px;font-size:12px}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<script>
+// ==================== STORE ====================
+const S={
+  ledger:JSON.parse(localStorage.l||'[]'),
+  notes:JSON.parse(localStorage.n||'[]'),
+  budget:JSON.parse(localStorage.b||'{}'),
+  todos:JSON.parse(localStorage.td||'[]'),
+  page:'ledger',
+  user:'me',
+  editNote:null,
+  noteFilter:'',
+};
+function save(k){localStorage[k[0]]=JSON.stringify(S[k])}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600)}
+function fm(n){return Number(n||0).toFixed(2)}
+function fms(n){return n>=0?'+'+fm(n):fm(n)}
+function fmtM(ym){const[p,m]=ym.split('-');return p+'/'+m}
+function my(k){return S.user==='partner'?'partner_'+k:k} // budget key prefix
+function userLabel(){return S.user==='me'?'我':'TA'}
+
+const CATS=['餐饮','交通','购物','娱乐','住房','医疗','教育','其他'];
+const now=new Date();
+const MON=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2);
+let curMon=MON;
+
+// ==================== User filter helpers ====================
+function myRs(rs){return rs.filter(r=>(r.user||'me')===S.user)}
+function myNs(ns){return ns.filter(n=>(n.user||'me')===S.user)}
+function myTds(tds){return tds.filter(t=>(t.user||'me')===S.user)}
+
+// ==================== RENDER ====================
+function render(){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===S.page));
+  const m=document.getElementById('main');
+  // Top bar with user switch
+  const pages={'ledger':'记账','notes':'记事本','budget':'预算','todo':'待办','bill':'账单'};
+  let h=`<div class="top-bar">
+    <h2>${pages[S.page]}</h2>
+    <div class="user-switch">
+      <button class="${S.user==='me'?'sel':''}" onclick="S.user='me';render()">我</button>
+      <button class="${S.user==='partner'?'sel':''}" onclick="S.user='partner';render()">TA</button>
+    </div>
+  </div>`;
+
+  if(S.page==='ledger') h+=ledgerHTML();
+  else if(S.page==='notes') h+=notesHTML();
+  else if(S.page==='budget') h+=budgetHTML();
+  else if(S.page==='todo') h+=todoHTML();
+  else if(S.page==='bill') h+=billHTML();
+
+  m.innerHTML=h;
+  if(S.page==='ledger') bindLedger();
+  if(S.page==='notes') bindNotes();
+  if(S.page==='budget') bindBudget();
+}
+
+// ==================== LEDGER ====================
+function ledgerHTML(){
+  const rs=myRs(S.ledger.filter(r=>r.date.startsWith(curMon))).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+  const inc=rs.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0);
+  const exp=rs.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0);
+  const bal=inc-exp;
+
+  let h=`<div class="sum-row"><div><div class="lbl">收入</div><div class="val" style="color:var(--green)">${fms(inc)}</div></div><div><div class="lbl">支出</div><div class="val" style="color:var(--red)">${fms(-exp)}</div></div><div><div class="lbl">结余</div><div class="val" style="color:${bal>=0?'var(--green)':'var(--red)'}">${fms(bal)}</div></div></div>`;
+
+  if(!rs.length)h+=`<div class="empty">${userLabel()}还没有记录</div>`;
+  rs.forEach(r=>{const isIn=r.type==='income';
+    h+=`<div class="card card-row rec-item" style="margin:0 16px 6px" data-id="${r.id}">
+      <div class="rec-icon" style="background:${isIn?'rgba(48,209,88,.12)':'rgba(255,69,58,.12)'};color:${isIn?'var(--green)':'var(--red)'}">${isIn?'+':'-'}</div>
+      <div class="rec-info"><div class="t">${r.note||r.category}</div><div class="m">${r.date} &middot; ${r.category}</div></div>
+      <div class="rec-amt" style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'+':'-'}${fm(r.amount)}</div>
+    </div>`;
+  });
+  h+=`<button class="fab" id="fab-add">+</button>
+  <div class="mdl" id="modal"><div class="mdl-in">
+    <div class="mdl-bar"><button id="mdl-x">取消</button><span>${userLabel()} 添加</span><button id="mdl-s">保存</button></div>
+    <div style="display:flex;gap:6px;margin-bottom:12px" id="mdl-t">
+      <button data-t="expense" style="flex:1;padding:9px;border-radius:var(--r);font-size:13px;border:1px solid var(--border);cursor:pointer;background:var(--red);color:#fff;font-family:inherit">支出</button>
+      <button data-t="income" style="flex:1;padding:9px;border-radius:var(--r);font-size:13px;border:1px solid var(--border);cursor:pointer;background:var(--card);color:var(--text);font-family:inherit">收入</button>
+    </div>
+    <div class="inp"><label>金额</label><input id="inp-a" type="number" step="0.01" placeholder="0.00"></div>
+    <div class="inp"><label>分类</label><div id="mdl-c" style="display:flex;flex-wrap:wrap;gap:5px">${CATS.map((c,i)=>`<span data-c="${c}" class="tg${i===0?' sel':''}">${c}</span>`).join('')}</div></div>
+    <div class="inp"><label>日期</label><input id="inp-d" type="date" value="${now.toISOString().slice(0,10)}" style="color-scheme:dark"></div>
+    <div class="inp"><label>备注</label><input id="inp-n" type="text" placeholder="选填"></div>
+  </div></div>`;
+  return h;
+}
+function bindLedger(){
+  let sT='expense',sC=CATS[0];
+  const m=document.getElementById('modal'),tB=document.querySelectorAll('#mdl-t button'),cB=document.querySelectorAll('#mdl-c span');
+  document.getElementById('fab-add').onclick=()=>{m.classList.add('show');sT='expense';sC=CATS[0];document.getElementById('inp-a').value='';document.getElementById('inp-n').value='';upT();upC()};
+  document.getElementById('mdl-x').onclick=()=>m.classList.remove('show');
+  function upT(){tB.forEach(b=>{const a=b.dataset.t===sT;b.style.background=a?(sT==='expense'?'var(--red)':'var(--green)'):'var(--card)';b.style.color=a?'#fff':'var(--text)'})}
+  tB.forEach(b=>b.onclick=()=>{sT=b.dataset.t;upT()});
+  function upC(){cB.forEach(s=>s.classList.toggle('sel',s.dataset.c===sC))}
+  cB.forEach(s=>s.onclick=()=>{sC=s.dataset.c;upC()});
+  document.getElementById('mdl-s').onclick=()=>{const a=parseFloat(document.getElementById('inp-a').value);if(!a||a<=0){toast('请输入有效金额');return}S.ledger.push({id:Date.now(),user:S.user,date:document.getElementById('inp-d').value,amount:a,type:sT,category:sC,note:document.getElementById('inp-n').value||''});save('ledger');m.classList.remove('show');render();toast('已添加')};
+  document.querySelectorAll('.rec-item').forEach(el=>{let t;el.addEventListener('touchstart',()=>{t=setTimeout(()=>{const id=parseInt(el.dataset.id);if(confirm('删除这条记录？')){S.ledger=S.ledger.filter(r=>r.id!==id);save('ledger');render();toast('已删除')}},600)});el.addEventListener('touchend',()=>clearTimeout(t));el.addEventListener('touchmove',()=>clearTimeout(t));el.addEventListener('contextmenu',e=>{e.preventDefault();const id=parseInt(el.dataset.id);if(confirm('删除这条记录？')){S.ledger=S.ledger.filter(r=>r.id!==id);save('ledger');render();toast('已删除')}})});
+}
+
+// ==================== NOTES ====================
+function notesHTML(){
+  if(S.editNote!==null){
+    const n=S.notes.find(x=>x.id===S.editNote)||{title:'',content:'',tags:'',id:0};
+    return `<div class="top-bar"><h2>${n.id?'编辑笔记':'新建笔记'}</h2><div class="user-switch"><button class="sel">${userLabel()}</button></div></div>
+    <div style="display:flex;gap:8px;padding:0 16px 12px">
+      <button onclick="S.editNote=null;render()" style="background:none;border:none;color:var(--accent);font-size:14px;cursor:pointer;font-family:inherit;padding:6px 0">← 返回</button>
+      <div style="flex:1"></div>
+      <button id="save-note" style="background:var(--accent);color:var(--bg);border:none;padding:6px 16px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">保存</button>
+    </div>
+    <div style="padding:0 16px">
+      <div class="inp"><input id="note-tl" value="${n.title}" placeholder="标题"></div>
+      <div class="inp"><input id="note-tg" value="${n.tags}" placeholder="标签，逗号分隔"></div>
+      <div class="inp"><textarea id="note-ct" placeholder="支持 Markdown">${n.content}</textarea></div>
+      <div id="note-pv" style="padding:14px;background:var(--card);border-radius:var(--r);border:1px solid var(--border);line-height:1.6;font-size:12px;white-space:pre-wrap;margin-top:8px;overflow:hidden"></div>
+      ${n.id?`<button onclick="S.notes=S.notes.filter(x=>x.id!==${n.id});save('notes');S.editNote=null;render();toast('已删除')" style="margin-top:10px;padding:8px;width:100%;background:rgba(255,69,58,.08);color:var(--red);border:1px solid rgba(255,69,58,.3);border-radius:var(--r);font-size:12px;cursor:pointer;font-family:inherit">删除笔记</button>`:''}
+    </div>`;
+  }
+  const myNotes=myNs(S.notes);
+  const tags=[...new Set(myNotes.flatMap(n=>(n.tags||'').split(',').map(t=>t.trim()).filter(Boolean)))];
+  let f=myNotes;if(S.noteFilter)f=f.filter(n=>(n.tags||'').includes(S.noteFilter));f.sort((a,b)=>b.updatedAt-a.updatedAt);
+  let h='';
+  if(tags.length){h+=`<div class="tags"><span class="tg${!S.noteFilter?' sel':''}" onclick="S.noteFilter='';render()">全部</span>${tags.map(t=>`<span class="tg${S.noteFilter===t?' sel':''}" onclick="S.noteFilter='${t}';render()">${t}</span>`).join('')}</div>`}
+  if(!f.length)h+=`<div class="empty">${userLabel()}还没有笔记</div>`;
+  f.forEach(n=>{const pv=(n.content||'').replace(/[#*`>]/g,'').slice(0,40)||'空',ts=(n.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
+    h+=`<div class="card ni" style="margin:0 16px 6px" data-id="${n.id}"><div class="ni-t">${n.title||'无标题'}</div><div class="ni-p">${pv}</div>${ts.length?`<div class="ni-tags">${ts.map(t=>`<span>${t}</span>`).join('')}</div>`:''}</div>`;
+  });
+  h+=`<button class="fab" id="btn-new-note">+</button>`;
+  return h;
+}
+function bindNotes(){
+  document.querySelectorAll('.ni').forEach(el=>{el.onclick=()=>{S.editNote=parseInt(el.dataset.id);render()};let t;el.addEventListener('touchstart',()=>{t=setTimeout(()=>{const id=parseInt(el.dataset.id);if(confirm('删除这条笔记？')){S.notes=S.notes.filter(n=>n.id!==id);save('notes');render();toast('已删除')}},600)});el.addEventListener('touchend',()=>clearTimeout(t));el.addEventListener('touchmove',()=>clearTimeout(t))});
+  const b=document.getElementById('btn-new-note');if(b)b.onclick=()=>{S.editNote=0;render()};
+  const s=document.getElementById('save-note');if(s)s.onclick=()=>{const tl=document.getElementById('note-tl').value.trim();if(!tl){toast('标题不能为空');return}const ct=document.getElementById('note-ct').value,tg=document.getElementById('note-tg').value.trim();if(S.editNote===0)S.notes.push({id:Date.now(),user:S.user,title:tl,content:ct,tags:tg,createdAt:new Date().toISOString().slice(0,19),updatedAt:new Date().toISOString().slice(0,19)});else{const n=S.notes.find(x=>x.id===S.editNote);if(n){n.title=tl;n.content=ct;n.tags=tg;n.updatedAt=new Date().toISOString().slice(0,19)}}save('notes');S.editNote=null;render();toast('已保存')};
+  const ta=document.getElementById('note-ct');if(ta)ta.oninput=()=>{const pv=document.getElementById('note-pv');if(pv)pv.innerHTML=ta.value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.+)$/gm,'<h3 style="font-size:14px;margin:8px 0 2px">$1</h3>').replace(/^## (.+)$/gm,'<h2 style="font-size:16px;margin:10px 0 2px">$1</h2>').replace(/^# (.+)$/gm,'<h1 style="font-size:18px;margin:12px 0 4px">$1</h1>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^- (.+)$/gm,'<li style="margin-left:14px">$1</li>').replace(/\n/g,'<br>')};
+}
+
+// ==================== BUDGET ====================
+function budgetHTML(){
+  const bk=my('b_'+curMon);
+  const bgt=S.budget[bk]||0;
+  const rs=myRs(S.ledger.filter(r=>r.date.startsWith(curMon)&&r.type==='expense'));
+  const exp=rs.reduce((s,r)=>s+r.amount,0);
+  const pct=bgt>0?Math.min(exp/bgt*100,100):0,rem=bgt-exp;
+  const clr=pct>90?'var(--red)':(pct>70?'var(--orange)':'var(--green)');
+  const ra=56,circ=2*Math.PI*ra,off=circ*(1-pct/100);
+  let h=`<div class="bg-ring"><div style="position:relative;width:130px;height:130px"><svg viewBox="0 0 130 130" style="transform:rotate(-90deg);width:130px;height:130px"><circle cx="65" cy="65" r="${ra}" fill="none" stroke="var(--border)" stroke-width="9"/><circle cx="65" cy="65" r="${ra}" fill="none" stroke="${clr}" stroke-width="9" stroke-dasharray="${circ}" stroke-dashoffset="${off}" stroke-linecap="round"/></svg><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center"><div style="font-size:24px;font-weight:600;color:${clr}">${Math.round(pct)}%</div></div></div></div>`;
+  h+=`<div class="bg-cards"><div><div class="lbl">预算</div><div class="val">${fm(bgt)}</div></div><div><div class="lbl">已消费</div><div class="val" style="color:var(--red)">${fm(exp)}</div></div><div><div class="lbl">剩余</div><div class="val" style="color:${rem>=0?'var(--green)':'var(--red)'}">${fm(rem)}</div></div></div>`;
+  h+=`<div class="card" style="margin:0 16px"><div class="inp"><label>${userLabel()} ${fmtM(curMon)} 预算</label></div><div style="display:flex;gap:6px"><input id="inp-bgt" type="number" step="0.01" value="${bgt||''}" placeholder="输入预算" style="flex:1;padding:10px;font-size:13px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);color:var(--text);outline:none;font-family:inherit"><button id="btn-bgt" style="padding:10px 20px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">保存</button></div></div>`;
+  return h;
+}
+function bindBudget(){
+  document.getElementById('btn-bgt').onclick=()=>{const v=parseFloat(document.getElementById('inp-bgt').value);if(!v||v<=0){toast('请输入有效金额');return}S.budget[my('b_'+curMon)]=v;save('budget');render();toast('已保存')};
+}
+
+// ==================== TODO ====================
+function defaultChains(){
+  return [
+    {user:'me',id:1,name:'示例待办',nodes:[{name:'买菜',done:true},{name:'缴费',done:false},{name:'整理',done:false}]},
+    {user:'partner',id:2,name:'示例待办',nodes:[{name:'取快递',done:false},{name:'预约',done:false}]},
+  ];
+}
+function todoHTML(){
+  if(!S.todos.length)S.todos=defaultChains();
+  const myChains=myTds(S.todos);
+  let h=`<div class="chains">`;
+  if(!myChains.length)h+=`<div class="empty" style="margin:16px">${userLabel()}还没有待办</div>`;
+  myChains.forEach((ch,ci)=>{
+    const gIdx=S.todos.findIndex(t=>t.id===ch.id);
+    const nowIdx=ch.nodes.findIndex(n=>!n.done);
+    h+=`<div class="chain-card"><div class="ch-h"><span class="n">${ch.name}</span><span class="del" onclick="S.todos.splice(${gIdx},1);save('todos');render()">删除</span></div>`;
+    // Arrows
+    h+=`<div class="arow">`;
+    ch.nodes.forEach((n,ni)=>{const d=n.done,now=ni===nowIdx;
+      h+=`<div class="an"><div class="ac${d?' done':''}${(!d&&now)?' now':''}" onclick="S.todos[${gIdx}].nodes[${ni}].done=!S.todos[${gIdx}].nodes[${ni}].done;save('todos');render()">${d?'&#10003;':ni+1}</div></div>`;
+      if(ni<ch.nodes.length-1)h+=`<div class="al${d?' done':''}"></div>`;
+    });
+    h+=`<div class="addn" onclick="addNode(${gIdx})">+</div></div>`;
+    // Labels
+    h+=`<div class="alabels">`;
+    ch.nodes.forEach((n,ni)=>{const d=n.done,now=ni===nowIdx;
+      h+=`<div class="aln"><div class="l${d?' done':''}${(!d&&now)?' now':''}">${n.name}</div></div>`;
+      if(ni<ch.nodes.length-1)h+=`<div style="width:26px;flex-shrink:0"></div>`;
+    });
+    h+=`</div>`;
+    // Subs
+    const subs=(ch.subs||[]);
+    if(subs.length)h+=`<div class="subs">${subs.map((s,si)=>`<div class="sr" onclick="(S.todos[${gIdx}].subs||[])[${si}].done=!(S.todos[${gIdx}].subs||[])[${si}].done;save('todos');render()"><span class="sd${s.done?' done':''}">${s.done?'&#10003;':'&bull;'}</span><span class="sn${s.done?' done':''}">${s.name}</span></div>`).join('')}</div>`;
+    h+=`<span class="addsub" onclick="addSub(${gIdx})">+ 子任务</span></div>`;
+  });
+  h+=`</div><button class="addc" onclick="addChain()">+ 新建待办链</button>`;
+  return h;
+}
+function addNode(ci){const n=prompt('节点名称：');if(!n)return;S.todos[ci].nodes.push({name:n,done:false});save('todos');render()}
+function addSub(ci){const n=prompt('子任务名称：');if(!n)return;if(!S.todos[ci].subs)S.todos[ci].subs=[];S.todos[ci].subs.push({name:n,done:false});save('todos');render()}
+function addChain(){const n=prompt('待办链名称：');if(!n)return;S.todos.push({user:S.user,id:Date.now(),name:n,nodes:[{name:'开始',done:false}]});save('todos');render()}
+function bindTodo(){}
+
+// ==================== BILL ====================
+function billHTML(){
+  const months=[];for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2))}
+  const u=S.user;
+  const mData=months.map(m=>{
+    const rs=S.ledger.filter(r=>r.date.startsWith(m)&&(r.user||'me')===u);
+    return{m,inc:rs.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0),exp:rs.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0)};
+  });
+  const thisM=mData[mData.length-1],lastM=mData[mData.length-2];
+  const maxExp=Math.max(...mData.map(d=>d.exp),1);
+  const thisY=now.getFullYear()+'';
+  const yRs=S.ledger.filter(r=>r.date.startsWith(thisY)&&(r.user||'me')===u);
+  const yInc=yRs.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0);
+  const yExp=yRs.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0);
+  const catData=CATS.map(c=>{const amt=S.ledger.filter(r=>r.date.startsWith(curMon)&&(r.user||'me')===u&&r.type==='expense'&&r.category===c).reduce((s,r)=>s+r.amount,0);return{cat:c,amt}}).filter(d=>d.amt>0).sort((a,b)=>b.amt-a.amt);
+  const maxCat=Math.max(...catData.map(d=>d.amt),1);
+
+  let h=`<div class="bill-cols">
+    <div><div class="b-lbl">本月支出</div><div class="b-val" style="color:var(--red)">${fm(thisM.exp)}</div></div>
+    <div><div class="b-lbl">上月支出</div><div class="b-val">${fm(lastM.exp)}</div></div>
+    <div><div class="b-lbl">环比</div><div class="b-val" style="color:${thisM.exp>lastM.exp?'var(--red)':'var(--green)'}">${lastM.exp>0?((thisM.exp-lastM.exp)/lastM.exp*100).toFixed(1)+'%':'-'}</div></div>
+  </div>`;
+
+  h+=`<div class="card" style="margin:0 16px 12px"><div style="font-size:12px;font-weight:600;margin-bottom:10px;letter-spacing:-.2px">${userLabel()} 月度支出</div>`;
+  mData.forEach(d=>{const isThis=d.m===curMon,hgt=Math.max(d.exp/maxExp*100,3);
+    h+=`<div class="bar-row"><div class="bar-lbl"><span>${fmtM(d.m)}</span><span style="color:${isThis?'var(--red)':'var(--dim)'}">${fm(d.exp)}</span></div><div class="bar-outer"><div class="bar-inner" style="width:${hgt}%;background:${isThis?'var(--red)':'var(--border)'}"></div></div></div>`;
+  });h+=`</div>`;
+
+  if(catData.length)h+=`<div class="card" style="margin:0 16px 12px"><div style="font-size:12px;font-weight:600;margin-bottom:10px;letter-spacing:-.2px">${userLabel()} 本月分类</div>${catData.map(d=>`<div class="bar-row"><div class="bar-lbl"><span>${d.cat}</span><span>${fm(d.amt)}</span></div><div class="bar-outer"><div class="bar-inner" style="width:${d.amt/maxCat*100}%;background:var(--dim)"></div></div></div>`).join('')}</div>`;
+
+  h+=`<div class="card" style="margin:0 16px"><div style="font-size:12px;font-weight:600;margin-bottom:10px;letter-spacing:-.2px">${userLabel()} ${thisY} 年度</div>
+    <div class="bill-cols" style="margin:0"><div><div class="b-lbl">年收入</div><div class="b-val" style="color:var(--green)">${fm(yInc)}</div></div><div><div class="b-lbl">年支出</div><div class="b-val" style="color:var(--red)">${fm(yExp)}</div></div><div><div class="b-lbl">净结余</div><div class="b-val" style="color:${yInc-yExp>=0?'var(--green)':'var(--red)'}">${fms(yInc-yExp)}</div></div></div></div>`;
+  return h;
+}
+function bindBill(){}
+
+// ==================== NAV ====================
+document.querySelectorAll('#nav button').forEach(b=>{b.onclick=()=>{S.page=b.dataset.p;render()}});
+
+// Data safety note
+if(!localStorage._warned){localStorage._warned='1';
+  setTimeout(()=>toast('数据存在手机本地，不清缓存不丢失'),800);}
+
+// SW
+if('serviceWorker' in navigator){navigator.serviceWorker.register('data:application/javascript,'+encodeURIComponent(`self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>new Response('')))})`))}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "money-notes",
+  "version": "1.0.0",
+  "description": "家庭记账+记事本 App",
+  "scripts": {
+    "build": "echo 'Static files ready'",
+    "cap:add": "npx cap add android",
+    "cap:sync": "npx cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/cli": "^6.0.0"
+  }
+}
