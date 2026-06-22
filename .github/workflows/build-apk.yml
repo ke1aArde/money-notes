@@ -20,37 +20,28 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK packages
+      - name: Install SDK packages
+        run: yes | ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Create Cordova project
         run: |
-          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+          cordova create app com.moneynotes.app MoneyNotes
+          cd app
+          cordova platform add android
+          # Replace default www with our app
+          rm -rf www/*
+          cp -r ../www/* www/
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Add Android platform
-        run: npx cap add android
-
-      - name: Sync web files
-        run: npx cap sync android
-
-      - name: Verify www in assets
-        run: |
-          echo "=== android/app/src/main/assets/ ==="
-          find android/app/src/main/assets/ -type f 2>/dev/null || echo "NO ASSETS FOUND"
-          # Ensure www files are copied manually if cap sync missed them
-          mkdir -p android/app/src/main/assets/public
-          cp -r www/* android/app/src/main/assets/public/ 2>/dev/null || true
-          echo "=== After manual copy ==="
-          find android/app/src/main/assets/public/ -type f 2>/dev/null || echo "STILL NO FILES"
-
-      - name: Build debug APK
-        run: cd android && ./gradlew assembleDebug
+      - name: Build APK
+        run: cd app && cordova build android --debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MoneyNotes-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: app/platforms/android/app/build/outputs/apk/debug/app-debug.apk
