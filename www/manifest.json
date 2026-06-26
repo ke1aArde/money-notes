@@ -1,6 +1,6 @@
 {
-  "name": "MoneyNotes",
-  "short_name": "MN",
+  "name": "Moneynotes",
+  "short_name": "Moneynotes",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#1a1a1a",
