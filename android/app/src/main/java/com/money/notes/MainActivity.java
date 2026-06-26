@@ -9,9 +9,6 @@ import android.webkit.WebSettings;
 
 public class MainActivity extends Activity {
 
-    private static final String APP_URL =
-        "https://0239717d3ea449ba9df6cf01e2cbdcd6.app.codebuddy.work";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -21,11 +18,11 @@ public class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setAllowFileAccess(false);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
 
         webView.setWebViewClient(new WebViewClient());
-        webView.loadUrl(APP_URL);
+        webView.loadUrl("file:///android_asset/index.html");
 
         // Fullscreen
         getWindow().setFlags(

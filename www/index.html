@@ -194,6 +194,14 @@ body{
 </head>
 <body>
 <div id="toast"></div>
+<div id="main"></div>
+<nav id="nav">
+  <button class="on" data-p="ledger"><span class="dot"></span>记账</button>
+  <button data-p="notes"><span class="dot"></span>记事本</button>
+  <button data-p="budget"><span class="dot"></span>预算</button>
+  <button data-p="todo"><span class="dot"></span>待办</button>
+  <button data-p="bill"><span class="dot"></span>账单</button>
+</nav>
 
 <script>
 // ==================== STORE ====================
@@ -430,16 +438,16 @@ function billHTML(){
 function bindBill(){}
 
 // ==================== NAV ====================
-try{
-document.addEventListener('DOMContentLoaded', ()=>{
-  document.querySelectorAll('#nav button').forEach(b=>{b.onclick=()=>{S.page=b.dataset.p;render()}});
-  if(!localStorage._warned){localStorage._warned='1';setTimeout(()=>toast('数据存在手机本地'),800)}
-  render();
-});
+document.querySelectorAll('#nav button').forEach(b=>{b.onclick=()=>{S.page=b.dataset.p;render()}});
 
-// SW disabled
-// if('serviceWorker' in navigator){...}
-}catch(e){document.body.innerHTML='<div style="color:#f5f5f5;text-align:center;padding:40px">App Error<br><small>'+e.message+'</small></div>';console.error(e)}
+// Data safety note
+if(!localStorage._warned){localStorage._warned='1';
+  setTimeout(()=>toast('数据存在手机本地，不清缓存不丢失'),800);}
+
+// SW
+if('serviceWorker' in navigator){navigator.serviceWorker.register('data:application/javascript,'+encodeURIComponent(`self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>new Response('')))})`))}
+
+render();
 </script>
 </body>
 </html>
