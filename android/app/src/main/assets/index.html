@@ -53,6 +53,34 @@ body{
 }
 .top-bar h2{font-size:22px;font-weight:600;letter-spacing:-.3px;white-space:nowrap}
 
+/* Settings */
+#settings-btn{
+  background:none;border:1px solid var(--border);color:var(--dim);
+  border-radius:6px;width:28px;height:28px;font-size:14px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  margin-left:6px;flex-shrink:0;
+}
+#settings-mdl{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.6);z-index:200;display:none;
+  align-items:center;justify-content:center;
+}
+#settings-mdl.show{display:flex}
+#settings-panel{
+  background:var(--card);border-radius:12px;padding:20px;width:280px;
+  border:1px solid var(--border);text-align:center;
+}
+#settings-panel h3{margin-bottom:16px;font-size:16px;font-weight:600}
+#settings-panel button{
+  display:block;width:100%;padding:12px;margin:6px 0;
+  border:1px solid var(--border);border-radius:8px;
+  background:transparent;color:var(--text);font-size:14px;
+  cursor:pointer;font-family:inherit;transition:all .2s;
+}
+#settings-panel button:hover{background:rgba(255,255,255,.05)}
+#settings-panel button.danger{color:var(--red);border-color:rgba(255,69,58,.3)}
+#settings-panel button.close-btn{color:var(--dim);font-size:13px;padding:8px}
+
 /* User switch */
 .user-switch{
   display:flex;background:var(--card);border-radius:16px;
@@ -195,6 +223,16 @@ body{
 <body>
 <div id="toast"></div>
 <div id="main"></div>
+<div id="settings-mdl">
+  <div id="settings-panel">
+    <h3>设置</h3>
+    <button onclick="exportData()">导出数据备份</button>
+    <button onclick="document.getElementById('import-file').click()">导入数据恢复</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+    <button class="danger" onclick="clearAllData()">清除所有数据</button>
+    <button class="close-btn" onclick="document.getElementById('settings-mdl').classList.remove('show')">关闭</button>
+  </div>
+</div>
 <nav id="nav">
   <button class="on" data-p="ledger"><span class="dot"></span>记账</button>
   <button data-p="notes"><span class="dot"></span>记事本</button>
@@ -241,9 +279,12 @@ function render(){
   const pages={'ledger':'记账','notes':'记事本','budget':'预算','todo':'待办','bill':'账单'};
   let h=`<div class="top-bar">
     <h2>${pages[S.page]}</h2>
+    <div style="display:flex;align-items:center;gap:6px">
     <div class="user-switch">
       <button class="${S.user==='me'?'sel':''}" onclick="S.user='me';render()">我</button>
       <button class="${S.user==='partner'?'sel':''}" onclick="S.user='partner';render()">TA</button>
+    </div>
+    <button id="settings-btn" onclick="document.getElementById('settings-mdl').classList.add('show')">&#9881;</button>
     </div>
   </div>`;
 
@@ -436,6 +477,41 @@ function billHTML(){
   return h;
 }
 function bindBill(){}
+
+// ==================== SETTINGS ====================
+function exportData(){
+  const data={l:S.ledger,n:S.notes,b:S.budget,td:S.todos};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download='moneynotes-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(url);
+  document.getElementById('settings-mdl').classList.remove('show');
+  toast('数据已导出');
+}
+function importData(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!confirm('确认导入？当前数据将被覆盖！'))return;
+      S.ledger=data.l||[];S.notes=data.n||[];S.budget=data.b||{};
+      S.todos=data.td||[];save('ledger');save('notes');save('budget');save('todos');
+      document.getElementById('settings-mdl').classList.remove('show');
+      render();toast('数据已恢复');
+    }catch(err){toast('文件格式错误')}
+  };
+  reader.readAsText(file);input.value='';
+}
+function clearAllData(){
+  if(!confirm('确定清除所有数据？此操作不可恢复！'))return;
+  if(!confirm('再次确认：所有记账、笔记、预算、待办将被永久删除'))return;
+  S.ledger=[];S.notes=[];S.budget={};S.todos=[];
+  save('ledger');save('notes');save('budget');save('todos');
+  document.getElementById('settings-mdl').classList.remove('show');
+  render();toast('已清除');
+}
 
 // ==================== NAV ====================
 document.querySelectorAll('#nav button').forEach(b=>{b.onclick=()=>{S.page=b.dataset.p;render()}});
