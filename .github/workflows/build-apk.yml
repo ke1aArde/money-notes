@@ -22,7 +22,7 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
-      - name: Install SDK packages
+      - name: Install SDK
         run: yes | ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install Cordova
@@ -31,14 +31,27 @@ jobs:
       - name: Create Cordova project
         run: |
           cordova create app com.moneynotes.app MoneyNotes
-          cd app
-          cordova platform add android
-          # Replace default www with our app
-          rm -rf www/*
-          cp -r ../www/* www/
+          # Cordova creates www/ inside app/. Replace with our files.
+          # Our www/ contains index.html, manifest.json, icon.svg, config.xml
+          cp www/index.html app/www/
+          cp www/manifest.json app/www/
+          cp www/icon.svg app/www/
+          cp www/config.xml app/www/
+          # Use our config.xml as Cordova's root config
+          cp www/config.xml app/config.xml
+          echo "=== App www/ contents ==="
+          ls -la app/www/
+
+      - name: Add Android platform
+        run: cd app && cordova platform add android
 
       - name: Build APK
         run: cd app && cordova build android --debug
+
+      - name: Verify APK has assets
+        run: |
+          echo "=== Checking APK for web assets ==="
+          ls -la app/platforms/android/app/build/outputs/apk/debug/ || echo "APK not found"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

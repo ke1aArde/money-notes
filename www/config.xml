@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" id="com.moneynotes.app" version="1.0.0">
+  <name>MoneyNotes</name>
+  <description>家庭记账+记事本</description>
+  <author>Ke1aArde</author>
+  <content src="index.html"/>
+  <access origin="*"/>
+  <allow-intent href="http://*/*"/>
+  <allow-intent href="https://*/*"/>
+  <preference name="Orientation" value="portrait"/>
+  <preference name="Fullscreen" value="true"/>
+  <preference name="StatusBarOverlaysWebView" value="true"/>
+  <preference name="StatusBarBackgroundColor" value="#1a1a1a"/>
+  <preference name="AndroidInsecureFileModeEnabled" value="true"/>
+  <platform name="android">
+    <preference name="android-minSdkVersion" value="22"/>
+    <preference name="android-targetSdkVersion" value="34"/>
+    <allow-intent href="market:*"/>
+  </platform>
+</widget>
