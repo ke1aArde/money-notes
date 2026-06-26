@@ -14,7 +14,7 @@
   <preference name="AndroidInsecureFileModeEnabled" value="true"/>
   <platform name="android">
     <preference name="android-minSdkVersion" value="22"/>
-    <preference name="android-targetSdkVersion" value="34"/>
+    <preference name="android-targetSdkVersion" value="36"/>
     <allow-intent href="market:*"/>
   </platform>
 </widget>
