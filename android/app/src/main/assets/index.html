@@ -81,6 +81,31 @@ body{
 #settings-panel button.danger{color:var(--red);border-color:rgba(255,69,58,.3)}
 #settings-panel button.close-btn{color:var(--dim);font-size:13px;padding:8px}
 
+/* Custom prompt */
+#prompt-mdl{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.6);z-index:300;display:none;
+  align-items:center;justify-content:center;
+}
+#prompt-mdl.show{display:flex}
+#prompt-panel{
+  background:var(--card);border-radius:12px;padding:20px;width:260px;
+  border:1px solid var(--border);
+}
+#prompt-title{font-size:14px;margin-bottom:12px;font-weight:500}
+#prompt-input{
+  width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none;
+  box-sizing:border-box;
+}
+#prompt-input:focus{border-color:var(--accent)}
+#prompt-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+#prompt-btns button{
+  padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;
+  font-family:inherit;border:1px solid var(--border);background:transparent;color:var(--text);
+}
+#prompt-btns button.ok{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+
 /* User switch */
 .user-switch{
   display:flex;background:var(--card);border-radius:16px;
@@ -233,6 +258,16 @@ body{
     <button class="close-btn" onclick="document.getElementById('settings-mdl').classList.remove('show')">关闭</button>
   </div>
 </div>
+<div id="prompt-mdl">
+  <div id="prompt-panel">
+    <div id="prompt-title"></div>
+    <input id="prompt-input" type="text" autocomplete="off">
+    <div id="prompt-btns">
+      <button onclick="promptCallback(false)">取消</button>
+      <button class="ok" onclick="promptCallback(true)">确定</button>
+    </div>
+  </div>
+</div>
 <nav id="nav">
   <button class="on" data-p="ledger"><span class="dot"></span>记账</button>
   <button data-p="notes"><span class="dot"></span>记事本</button>
@@ -255,6 +290,24 @@ const S={
 };
 function save(k){localStorage[k[0]]=JSON.stringify(S[k])}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600)}
+// Custom prompt (replaces native prompt which fails in Android WebView)
+let promptResolve=null;
+function customPrompt(title,placeholder){
+  return new Promise(resolve=>{
+    promptResolve=resolve;
+    document.getElementById('prompt-title').textContent=title;
+    const inp=document.getElementById('prompt-input');
+    inp.placeholder=placeholder||'';inp.value='';
+    document.getElementById('prompt-mdl').classList.add('show');
+    setTimeout(()=>inp.focus(),100);
+  });
+}
+function promptCallback(ok){
+  document.getElementById('prompt-mdl').classList.remove('show');
+  const v=document.getElementById('prompt-input').value.trim();
+  promptResolve(ok?v:null);
+  promptResolve=null;
+}
 function fm(n){return Number(n||0).toFixed(2)}
 function fms(n){return n>=0?'+'+fm(n):fm(n)}
 function fmtM(ym){const[p,m]=ym.split('-');return p+'/'+m}
@@ -437,9 +490,9 @@ function todoHTML(){
   h+=`</div><button class="addc" onclick="addChain()">+ 新建待办链</button>`;
   return h;
 }
-function addNode(ci){const n=prompt('节点名称：');if(!n)return;S.todos[ci].nodes.push({name:n,done:false});save('todos');render()}
-function addSub(ci){const n=prompt('子任务名称：');if(!n)return;if(!S.todos[ci].subs)S.todos[ci].subs=[];S.todos[ci].subs.push({name:n,done:false});save('todos');render()}
-function addChain(){const n=prompt('待办链名称：');if(!n)return;S.todos.push({user:S.user,id:Date.now(),name:n,nodes:[{name:'开始',done:false}]});save('todos');render()}
+function addNode(ci){customPrompt('新建节点','节点名称：').then(n=>{if(!n)return;S.todos[ci].nodes.push({name:n,done:false});save('todos');render()})}
+function addSub(ci){customPrompt('新建子任务','子任务名称：').then(n=>{if(!n)return;if(!S.todos[ci].subs)S.todos[ci].subs=[];S.todos[ci].subs.push({name:n,done:false});save('todos');render()})}
+function addChain(){customPrompt('新建待办链','待办链名称：').then(n=>{if(!n)return;S.todos.push({user:S.user,id:Date.now(),name:n,nodes:[{name:'开始',done:false}]});save('todos');render()})}
 function bindTodo(){}
 
 // ==================== BILL ====================
