@@ -252,8 +252,14 @@ body{
   <div id="settings-panel">
     <h3>设置</h3>
     <button onclick="exportData()">导出数据备份</button>
-    <button onclick="document.getElementById('import-file').click()">导入数据恢复</button>
-    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+    <button onclick="showImportTextarea()">导入数据恢复</button>
+    <div id="import-area" style="display:none;margin-top:8px">
+      <textarea id="import-json" placeholder="粘贴JSON备份内容..." style="width:100%;height:100px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;padding:8px;font-family:monospace;resize:none;box-sizing:border-box"></textarea>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button onclick="importFromPaste()" style="flex:1;background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:8px;font-size:13px;cursor:pointer;font-family:inherit">确认导入</button>
+        <button onclick="document.getElementById('import-area').style.display='none'" style="background:none;border:1px solid var(--border);color:var(--dim);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;font-family:inherit">取消</button>
+      </div>
+    </div>
     <button class="danger" onclick="clearAllData()">清除所有数据</button>
     <button class="close-btn" onclick="document.getElementById('settings-mdl').classList.remove('show')">关闭</button>
   </div>
@@ -542,20 +548,22 @@ function exportData(){
   document.getElementById('settings-mdl').classList.remove('show');
   toast('数据已导出');
 }
-function importData(input){
-  const file=input.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      const data=JSON.parse(e.target.result);
-      if(!confirm('确认导入？当前数据将被覆盖！'))return;
-      S.ledger=data.l||[];S.notes=data.n||[];S.budget=data.b||{};
-      S.todos=data.td||[];save('ledger');save('notes');save('budget');save('todos');
-      document.getElementById('settings-mdl').classList.remove('show');
-      render();toast('数据已恢复');
-    }catch(err){toast('文件格式错误')}
-  };
-  reader.readAsText(file);input.value='';
+function showImportTextarea(){
+  document.getElementById('import-area').style.display='block';
+  document.getElementById('import-json').focus();
+}
+function importFromPaste(){
+  const raw=document.getElementById('import-json').value.trim();
+  if(!raw){toast('请粘贴备份内容');return}
+  try{
+    const data=JSON.parse(raw);
+    S.ledger=data.l||[];S.notes=data.n||[];S.budget=data.b||{};
+    S.todos=data.td||[];save('ledger');save('notes');save('budget');save('todos');
+    document.getElementById('settings-mdl').classList.remove('show');
+    document.getElementById('import-area').style.display='none';
+    document.getElementById('import-json').value='';
+    render();toast('数据已恢复');
+  }catch(err){toast('格式错误，请检查JSON')}
 }
 function clearAllData(){
   if(!confirm('确定清除所有数据？此操作不可恢复！'))return;
